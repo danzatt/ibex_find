@@ -20,32 +20,35 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
 #include <sys/stat.h>
 
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 #include "plib.h"
 #include "link.c"
 
+#include "functions.c"
+
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
-#define print_find_x(x) printf(#x " = 0x%x\n", (unsigned int) x);
+#define print_find_x(x) printf(#x " = 0x%x\n", (unsigned int) x)
 
 int main(int argc, char const *argv[]) {
+
   char *addr;
   int fd;
   struct stat sb;
-  off_t offset, pa_offset;
-  size_t length;
-  ssize_t s;
 
+  int ida = 0;
+
+  if (argc == 3){
+    if (strcmp(argv[2], "-ida") == 0){
+//      printf("ida\n");
+      ida = 1;
+    }
+  }
 
   fd = open(argv[1], O_RDONLY);
   if (fd == -1)
@@ -68,26 +71,74 @@ int main(int argc, char const *argv[]) {
 
   IBOOT_LEN = sb.st_size;
 
-  printf("TARGET_BASEADDR 0x%x\n", TARGET_BASEADDR);
-  printf("IBOOT_LEN 0x%x\n", IBOOT_LEN);
-  printf("end 0x%x\n", IBOOT_LEN + TARGET_BASEADDR);
+  if (ida){
+    printf("setcmt;symbol found by ibex\n");
 
-  print_find_x(find_printf());
-  print_find_x(find_snprintf());
-  print_find_x(find_malloc());
-  print_find_x(find_free());
-  print_find_x(find_memmove());
-  print_find_x(find_jumpto());
-  print_find_x(find_aes_crypto_cmd());
-  print_find_x(find_enter_critical_section());
-  print_find_x(find_exit_critical_section());
-  print_find_x(find_h2fmi_select());
-  print_find_x(find_create_envvar());
-  print_find_x(find_fs_mount());
-  print_find_x(find_fs_loadfile());
+    printf("printf;%x\n", find_printf());
+    printf("snprintf;%x\n", find_snprintf());
+    printf("malloc;%x\n", find_malloc());
+    printf("free;%x\n", find_free());
+    printf("memmove;%x\n", find_memmove());
+    printf("jumpto;%x\n", find_jumpto());
+    printf("aes_crypto_cmd;%x\n", find_aes_crypto_cmd());
+    printf("enter_critical_section;%x\n", find_enter_critical_section());
+    printf("exit_critical_section;%x\n", find_exit_critical_section());
+    printf("h2fmi_select;%x\n", find_h2fmi_select());
+    printf("create_envvar;%x\n", find_create_envvar());
+    printf("fs_mount;%x\n", find_fs_mount());
+    printf("fs_loadfile;%x\n", find_fs_loadfile());
+    printf("panic;%x\n", find_panic());
+    printf("main;%x\n", find_easy("main", sizeof("main") - 1));
+    printf("task_create;%x\n", find_task_create());
 
-  print_find_x(find_bdev_stack());
-  print_find_x(find_image_list());
+    printf("bdev_stack;%x\n", find_bdev_stack());
+    printf("image_list;%x\n", find_image_list());
+  } else {
 
+    printf("TARGET_BASEADDR 0x%x\n", TARGET_BASEADDR);
+    printf("IBOOT_LEN 0x%x\n", IBOOT_LEN);
+    printf("end 0x%x\n", IBOOT_LEN + TARGET_BASEADDR);
+    printf("\n===========ibex===========\n");
+    printf("printf = 0x%x\n", find_printf());
+    printf("snprintf = 0x%x\n", find_snprintf());
+    printf("malloc = 0x%x\n", find_malloc());
+    printf("free = 0x%x\n", find_free());
+    printf("memmove = 0x%x\n", find_memmove());
+    printf("jumpto = 0x%x\n", find_jumpto());
+    printf("aes_crypto_cmd = 0x%x\n", find_aes_crypto_cmd());
+    printf("enter_critical_section = 0x%x\n", find_enter_critical_section());
+    printf("exit_critical_section = 0x%x\n", find_exit_critical_section());
+    printf("h2fmi_select = 0x%x\n", find_h2fmi_select());
+    printf("create_envvar = 0x%x\n", find_create_envvar());
+    printf("fs_mount = 0x%x\n", find_fs_mount());
+    printf("fs_loadfile = 0x%x\n", find_fs_loadfile());
+    printf("panic = 0x%x\n", find_panic());
+    printf("main = 0x%x\n", find_easy("main", sizeof("main") - 1));
+    printf("task_create = 0x%x\n", find_task_create());
+
+    printf("bdev_stack = 0x%x\n", find_bdev_stack());
+    printf("image_list = 0x%x\n", find_image_list());
+  }
+
+#ifdef USE_CYANIDE
+  if (ida){
+    printf("setcmt;symbol found by cyanide\n");
+
+    for (int i = 0; i < (sizeof(functions)/sizeof(functions[0]) - 1); i++) {
+      unsigned int
+          x = find_function(functions[i][0], (unsigned char *) TARGET_BASEADDR, (unsigned char *) TARGET_BASEADDR);
+      printf("%s;%x\n", functions[i][0], x);
+    }
+
+  } else {
+    printf("\n==========cyanide=========\n");
+
+    for (int i = 0; i < (sizeof(functions)/sizeof(functions[0]) - 1); i++) {
+      unsigned int
+          x = find_function(functions[i][0], (unsigned char *) TARGET_BASEADDR, (unsigned char *) TARGET_BASEADDR);
+      printf("%s = 0x%x\n", functions[i][0], x);
+    }
+  }
+#endif
   return 0;
 }

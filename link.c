@@ -420,157 +420,32 @@ find_image_list(void)
 {
     const void *mm = find_xref("image %p: bdev %p type %c%c%c%c offset 0x%llx", sizeof("image %p: bdev %p type %c%c%c%c offset 0x%llx") - 1);
     if (!mm) {
-        static struct linked_list fake_image_list;
-        fake_image_list.next = fake_image_list.prev = &fake_image_list;
-        return &fake_image_list;
+        return NULL;
     }
     return ((void **)mm)[-1];
 }
 
 MAYBE_UNUSED int
-stub_printf(const char *fmt, ...)
+find_panic(void)
 {
-    (void)(fmt);
-    return 0;
+    return (int)find_easy("double panic in ", sizeof("double panic in ") - 1) - 2;
 }
 
-MAYBE_UNUSED int
-stub_snprintf(char *buf, size_t max, const char *fmt, ...)
+MAYBE_UNUSED const void *
+find_task_create(void)
 {
-    (void)(buf && max && fmt);
-    printf_("unresolved snprintf\n");
-    return 0;
-}
-
-MAYBE_UNUSED void *
-stub_malloc(size_t n)
-{
-    malloc_t p = find_malloc();
-    if (p) {
-        malloc_ = p;
-        return malloc_(n);
+    const char *fn;
+    void *ldr;
+    void *bl;
+    const void *mm = find_xref("main", sizeof("main") - 1);
+    if (!mm) {
+        return NULL;
     }
-    printf_("unresolved malloc\n");
-    return NULL;
-}
 
-MAYBE_UNUSED void
-stub_free(void *ptr)
-{
-    free_t p = find_free();
-    if (p) {
-        free_ = p;
-        free_(ptr);
-        return;
-    }
-    printf_("unresolved free\n");
-}
+    ldr = ldr_search_up(mm, 0x32);
+    bl = bl_search_down(ldr, 0x32);
 
-MAYBE_UNUSED void *
-stub_memmove(void *dst, const void *src, size_t n)
-{
-    memmove_t p = find_memmove();
-    if (p) {
-        memmove_ = p;
-        return memmove_(dst, src, n);
-    }
-    printf_("unresolved memmove\n");
-    return memmove(dst, src, n);
-}
+    fn = resolve_bl32(bl);
 
-MAYBE_UNUSED_NORETURN void
-stub_jumpto(int a, void *b, int c, int d)
-{
-    jumpto_t p = find_jumpto();
-    if (p) {
-        jumpto_ = p;
-        jumpto_(a, b, c, d);
-    }
-    printf_("unresolved jumpto\n");
-    _exit(0);
-}
-
-MAYBE_UNUSED int
-stub_aes_crypto_cmd(int crypt_type, void *inbuf, void *outbuf, unsigned int inbuf_len, unsigned int aes_key_type, char *iv, char *key)
-{
-    aes_crypto_cmd_t p = find_aes_crypto_cmd();
-    if (p) {
-        aes_crypto_cmd_ = p;
-        return aes_crypto_cmd_(crypt_type, inbuf, outbuf, inbuf_len, aes_key_type, iv, key);
-    }
-    printf_("unresolved aes_crypto_cmd\n");
-    return -1;
-}
-
-MAYBE_UNUSED void
-stub_enter_critical_section(void)
-{
-    enter_critical_section_t p = find_enter_critical_section();
-    if (p) {
-        enter_critical_section_ = p;
-        enter_critical_section_();
-        return;
-    }
-    printf_("unresolved enter_critical_section\n");
-    _exit(0);
-}
-
-MAYBE_UNUSED void
-stub_exit_critical_section(void)
-{
-    exit_critical_section_t p = find_exit_critical_section();
-    if (p) {
-        exit_critical_section_ = p;
-        exit_critical_section_();
-        return;
-    }
-    printf_("unresolved exit_critical_section\n");
-}
-
-MAYBE_UNUSED void *
-stub_h2fmi_select(void)
-{
-    h2fmi_select_t p = find_h2fmi_select();
-    if (p) {
-        h2fmi_select_ = p;
-        return h2fmi_select_();
-    }
-    printf_("unresolved h2fmi_select\n");
-    return NULL;
-}
-
-MAYBE_UNUSED int
-stub_create_envvar(const char *var, const char *val, int wtf)
-{
-    create_envvar_t p = find_create_envvar();
-    if (p) {
-        create_envvar_ = p;
-        return create_envvar_(var, val, wtf);
-    }
-    printf_("unresolved create_envvar\n");
-    return -1;
-}
-
-MAYBE_UNUSED int
-stub_fs_mount(const char *partition, const char *fstype, const char *mountpoint)
-{
-    fs_mount_t p = find_fs_mount();
-    if (p) {
-        fs_mount_ = p;
-        return fs_mount_(partition, fstype, mountpoint);
-    }
-    printf_("unresolved fs_mount\n");
-    return -1;
-}
-
-MAYBE_UNUSED int
-stub_fs_loadfile(const char *path, void *address, unsigned int *size)
-{
-    fs_loadfile_t p = find_fs_loadfile();
-    if (p) {
-        fs_loadfile_ = p;
-        return fs_loadfile_(path, address, size);
-    }
-    printf_("unresolved fs_loadfile\n");
-    return -1;
+    return fn;
 }
